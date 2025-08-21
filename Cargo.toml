@@ -1,11 +1,12 @@
 [package]
-name = "fei"
+name = "ick"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = { version = "1.0.99" }
 clap = { version = "4.5.45", features=["derive"] }
+keepass = { version = "0.8.4" }
 ssh2 = { version = "0.9.5" }
 subprocess = { version = "0.2.9" }
 

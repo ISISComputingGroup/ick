@@ -1,5 +1,5 @@
 use clap::{Args, Parser, Subcommand};
-use fei::{add_creds, remove_creds, run_ssh_command};
+use ick::{add_creds, remove_creds, run_ssh_command};
 use std::process::ExitCode;
 
 #[derive(Debug, Args)]
@@ -35,7 +35,6 @@ struct App {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-
     /// Add credentials to the windows credential store
     AddCreds {},
 
@@ -54,9 +53,9 @@ enum Commands {
         expected_exit_code: Option<i32>,
     },
 
-    Login { },
+    Login {},
 
-    Logout { },
+    Logout {},
 }
 
 fn main() -> ExitCode {
@@ -69,8 +68,8 @@ fn main() -> ExitCode {
             command,
             expected_exit_code,
         } => run_ssh_command(&args.global_opts.instruments, &command, expected_exit_code),
-        Commands::Login {  } => { Ok(())},
-        Commands::Logout {  } => { Ok(())},
+        Commands::Login {} => Ok(()),
+        Commands::Logout {} => Ok(()),
     };
 
     match result {
