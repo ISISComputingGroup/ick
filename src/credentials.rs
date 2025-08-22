@@ -198,7 +198,9 @@ mod tests {
             std::env::set_var("ICK_KEEPASS_KEY", "bar");
         }
         let source = CredentialSource::from_env();
-        assert!(source.is_err());
+        assert!(source.is_err_and(|e| e.to_string().contains(
+            "Invalid ICK_CRED_STORE environment variable, must be either 'keepass' or 'keeper'"
+        )));
     }
 
     #[test]

@@ -1,3 +1,62 @@
+//! ick - IBEX-credentials-from-keeper/keepass.
+//! 
+//! ick provides thin wrappers over `cmdkey` and `ssh`, injecting appropriate credentials
+//! which are acquired from either keeper or keepass, and allowing these commands to be
+//! easily repeated across multiple machines.
+//! 
+//! # Installation
+//! 
+//! Put the binary `ick.exe` in a directory on your `PATH`.
+//! 
+//! `ick` requires environment variables in order to acquire credentials: 
+//! - `ICK_CRED_STORE`, should be set to either `keeper` or `keepass`, describing the
+//! password-manager backend which `ick` will acquire passwords from. This environment
+//! variable can safely be set permanently.
+//! - `ICK_KEEPASS_FILE` (keepass only), a path to a keepass (.kdbx) file containing the passwords.
+//! This environment variable can safely be set permanently.
+//! - `ICK_KEEPASS_KEY` (keepass only), the decryption password for the keepass database. **This should
+//! not be set as a permanent environment variable**; it should be manually entered as an env variable
+//! into a specific shell, and should be cleared once administration tasks are complete.
+//! - `ICK_KEEPER_TOKEN` (keeper only), a token used to access the keeper API. **This should
+//! not be set as a permanent environment variable**; it should be manually entered as an env variable
+//! into a specific shell, and should be cleared once administration tasks are complete.
+//! 
+//! # Usage
+//! 
+//! For a description of available `ick` commands and flags, use:
+//! ```
+//! ick help
+//! ```
+//! 
+//! For help on a specific subcommand, for example `ick ssh`, use:
+//! ```
+//! ick help ssh
+//! ```
+//! 
+//! # Examples:
+//! 
+//! Add user-level credentials for `INST1` and `INST2` to the windows credential store, as an unprivileged user or admin user:
+//! ```
+//! ick add-creds -i NDXINST1,NDXINST2
+//! ick add-creds -i NDXINST1,NDXINST2 --admin
+//! ```
+//! 
+//! Remove credentials for `INST1` and `INST2` from the windows credential store:
+//! ```
+//! ick remove-creds -i NDXINST1,NDXINST2
+//! ```
+//! 
+//! Run `hostname` on the machines listed in `machines.txt`, showing the output of the remote command:
+//! ```
+//! ick ssh -I machines.txt "hostname" -v
+//! ```
+//! 
+//! Run `exit /b 42`, as admin, on `INST1` and `INST2`, checking for an expected exit status of 42:
+//! ```
+//! ick ssh -i NDXINST1,NDXINST2 "echo hi && exit /b 42" -e 42 -v -a
+//! ```
+//!
+
 use anyhow::{Context, bail};
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
@@ -132,6 +191,7 @@ fn get_machines(args: &App) -> anyhow::Result<Vec<String>> {
     Ok(machines)
 }
 
+#[doc(hidden)]
 pub fn run() -> anyhow::Result<()> {
     let args = App::parse();
 
