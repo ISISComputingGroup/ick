@@ -4,11 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { version = "1.0.99" }
+anyhow = "1.0.99"
 clap = { version = "4.5.45", features=["derive"] }
-keepass = { version = "0.8.4" }
-ssh2 = { version = "0.9.5" }
-subprocess = { version = "0.2.9" }
+clap-verbosity-flag = "3.0.4"
+env_logger = "0.11.8"
+keepass = "0.8.4"
+log = "0.4.27"
+ssh2 = "0.9.5"
+subprocess = "0.2.9"
+
+[dev-dependencies]
+serial_test = "3.2.0"
 
 [lints.clippy]
 indexing_slicing = "deny"
