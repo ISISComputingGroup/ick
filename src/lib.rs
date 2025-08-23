@@ -114,7 +114,7 @@ fn add_cmdkey_creds(instruments: &[String], admin: bool) -> anyhow::Result<()> {
         bail!("No instruments specified");
     }
     credentials::get_credentials(instruments, admin, None)?
-        .iter()
+        .into_iter()
         .try_for_each(cmdkey::add_cmdkey_cred)
 }
 

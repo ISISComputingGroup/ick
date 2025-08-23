@@ -10,7 +10,7 @@ clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.8"
 keepass = "0.8.4"
 log = "0.4.27"
-subprocess = "0.2.9"
+windows = { version = "0.61.3", features = ["Win32", "Win32_Security", "Win32_Security_Credentials" ] }
 
 [dev-dependencies]
 serial_test = "3.2.0"
