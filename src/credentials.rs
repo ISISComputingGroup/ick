@@ -1,5 +1,6 @@
 use anyhow::{Context, anyhow};
 use log::trace;
+use serde::Serialize;
 use std::fs::File;
 
 #[cfg(test)]
@@ -14,11 +15,65 @@ use keepass::{
 /// - Host, the machine on which this credential is valid
 /// - Username, authentication username
 /// - Password, authentication password
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Serialize)]
 pub struct Credential {
-    pub host: String,
-    pub username: String,
-    pub password: String,
+    /// hostname on which this credential is valid.
+    host: String,
+    /// Username to authenticate to this host. May contain a domain
+    /// component, like SERVER\user, or may just be a "bare"
+    /// username.
+    username: String,
+    /// Password corresponding to the provided username.
+    password: String,
+}
+
+impl Credential {
+    /// Create a new credential from hostname, username, password.
+    ///
+    /// host must be a hostname on which this credential applies
+    ///
+    /// username may be either qualified (SERVER\user), or a bare username
+    ///
+    /// password must be the password corresponding to the above username
+    pub fn new(host: &str, username: &str, password: &str) -> Credential {
+        Credential {
+            host: host.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned(),
+        }
+    }
+
+    /// Get the target machine on which this credential is valid.
+    pub fn host(&self) -> &str {
+        &self.host
+    }
+
+    /// Get only the username component of the username, stripping any domain component.
+    #[allow(unused)]
+    pub fn username_without_domain(&self) -> &str {
+        if let Some((_, username)) = self.username.split_once('\\') {
+            username
+        } else {
+            &self.username
+        }
+    }
+
+    /// Get only the domain component of the username. If the username was unqualified,
+    /// return None.
+    #[allow(unused)]
+    pub fn domain(&self) -> Option<&str> {
+        self.username.split_once('\\').map(|(domain, _)| domain)
+    }
+
+    /// Get the username, which may be either qualified (SERVER\user) or bare.
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    /// Get the password for this credential.
+    pub fn password(&self) -> &str {
+        &self.password
+    }
 }
 
 /// Get an environment variable, providing context on which environment
@@ -58,6 +113,7 @@ impl CredentialSource {
     }
 }
 
+/// Get the name of the keepass group containing the relevant set of credentials.
 fn get_keepass_group_name(admin: bool) -> &'static str {
     if admin { "Admin" } else { "User" }
 }
@@ -93,17 +149,15 @@ fn get_credentials_keepass(
                 Group { .. } => Err(anyhow!(
                     "Expected entry, not group, in {group_name}/{machine}"
                 )),
-                Entry(fields, ..) => Ok(Credential {
-                    host: machine.clone(),
-                    username: fields
+                Entry(fields, ..) => Ok(Credential::new(
+                    machine,
+                    fields
                         .get("UserName")
-                        .ok_or(anyhow!("Username field not found"))?
-                        .to_owned(),
-                    password: fields
+                        .ok_or(anyhow!("Username field not found"))?,
+                    fields
                         .get("Password")
-                        .ok_or(anyhow!("Password field not found"))?
-                        .to_owned(),
-                }),
+                        .ok_or(anyhow!("Password field not found"))?,
+                )),
             }
         })
         .collect()
@@ -207,5 +261,26 @@ mod tests {
     fn test_get_keepass_group_name() {
         assert_eq!(get_keepass_group_name(false), "User");
         assert_eq!(get_keepass_group_name(true), "Admin");
+    }
+
+    #[test]
+    fn test_username_without_domain() {
+        assert_eq!(
+            Credential::new("foo", "bar\\baz", "pass").username_without_domain(),
+            "baz"
+        );
+        assert_eq!(
+            Credential::new("foo", "bar", "pass").username_without_domain(),
+            "bar"
+        );
+    }
+
+    #[test]
+    fn test_get_domain() {
+        assert_eq!(
+            Credential::new("foo", "bar\\baz", "pass").domain(),
+            Some("bar")
+        );
+        assert_eq!(Credential::new("foo", "bar", "pass").domain(), None);
     }
 }

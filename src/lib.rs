@@ -1,4 +1,4 @@
-//! ick - IBEX-credentials-from-keeper/keepass.
+//! ick - **i**nstrument-**c**redentials-from-**k**eeper/**k**eepass.
 //!
 //! ick provides a thin wrapper over the windows credential store, injecting appropriate credentials
 //! which are acquired from either keeper or keepass.
@@ -10,15 +10,15 @@
 //! `ick` requires environment variables in order to acquire credentials:
 //! - `ICK_CRED_STORE`, should be set to either `keeper` or `keepass`, describing the
 //!   password-manager backend which `ick` will acquire passwords from. This environment
-//!   variable can safely be set permanently.
+//!   variable can be set permanently.
 //! - `ICK_KEEPASS_FILE` (keepass only), a path to a keepass (.kdbx) file containing the passwords.
-//!   This environment variable can safely be set permanently.
+//!   This environment variable can be set permanently.
 //! - `ICK_KEEPASS_KEY` (keepass only), the decryption password for the keepass database. **This should
 //!   not be set as a permanent environment variable**; it should be manually entered as an env variable
-//!   into a specific shell, and should be cleared once administration tasks are complete.
+//!   into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.
 //! - `ICK_KEEPER_TOKEN` (keeper only), a token used to access the keeper API. **This should
 //!   not be set as a permanent environment variable**; it should be manually entered as an env variable
-//!   into a specific shell, and should be cleared once administration tasks are complete.
+//!   into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.
 //!
 //! # Usage
 //!
@@ -32,7 +32,7 @@
 //! ick help add-creds
 //! ```
 //!
-//! # Examples:
+//! # Examples
 //!
 //! Add user-level credentials for `INST1` and `INST2` to the windows credential store, as an unprivileged user or admin user:
 //! ```
@@ -40,9 +40,19 @@
 //! ick add-creds -i NDXINST1,NDXINST2 --admin
 //! ```
 //!
+//! Specify machines in a file instead of on the command line:
+//! ```
+//! ick add-creds -I machines.txt
+//! ```
+//!
 //! Remove credentials for `INST1` and `INST2` from the windows credential store:
 //! ```
 //! ick remove-creds -i NDXINST1,NDXINST2
+//! ```
+//!
+//! Retrieve admin credentials for the specified machine in pretty-JSON format, for use by other tools or scripts:
+//! ```
+//! ick json -I machines.txt --admin --pretty
 //! ```
 
 use anyhow::{Context, bail};
@@ -50,8 +60,8 @@ use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
 use log::{debug, trace};
 
-mod cmdkey;
 mod credentials;
+mod wincred;
 
 #[derive(Debug, Args)]
 struct GlobalOpts {
@@ -107,24 +117,49 @@ enum Commands {
 
     /// Remove credentials from the windows credential store
     RemoveCreds {},
+
+    /// Retrieve credentials for all specified machines in JSON format, for use
+    /// by external tools or scripts.
+    Json {
+        #[arg(
+            short = 'p',
+            long = "pretty",
+            action,
+            help = "Pretty-print JSON output"
+        )]
+        pretty: bool,
+    },
 }
 
-fn add_cmdkey_creds(instruments: &[String], admin: bool) -> anyhow::Result<()> {
+fn add_win_creds(instruments: &[String], admin: bool) -> anyhow::Result<()> {
     if instruments.is_empty() {
         bail!("No instruments specified");
     }
     credentials::get_credentials(instruments, admin, None)?
         .into_iter()
-        .try_for_each(cmdkey::add_cmdkey_cred)
+        .try_for_each(wincred::add_win_cred)
 }
 
-fn remove_cmdkey_creds(instruments: &[String]) -> anyhow::Result<()> {
+fn remove_win_creds(instruments: &[String]) -> anyhow::Result<()> {
     if instruments.is_empty() {
         bail!("No instruments specified");
     }
     instruments
         .iter()
-        .try_for_each(|inst| cmdkey::remove_cmdkey_cred(inst))
+        .try_for_each(|inst| wincred::remove_win_cred(inst))
+}
+
+fn print_json(instruments: &[String], admin: bool, pretty: bool) -> anyhow::Result<()> {
+    let creds = credentials::get_credentials(instruments, admin, None)?;
+    trace!("Serialising credentials to JSON");
+
+    let json = if pretty {
+        serde_json::to_string_pretty(&creds)
+    } else {
+        serde_json::to_string(&creds)
+    }?;
+    println!("{json}");
+    Ok(())
 }
 
 fn load_instruments_from_file(file_contents: &str) -> Vec<String> {
@@ -166,8 +201,9 @@ pub fn run() -> anyhow::Result<()> {
     let machines = get_machines(&args)?;
 
     match args.command {
-        Commands::AddCreds {} => add_cmdkey_creds(&machines, args.global_opts.admin),
-        Commands::RemoveCreds {} => remove_cmdkey_creds(&machines),
+        Commands::AddCreds {} => add_win_creds(&machines, args.global_opts.admin),
+        Commands::RemoveCreds {} => remove_win_creds(&machines),
+        Commands::Json { pretty } => print_json(&machines, args.global_opts.admin, pretty),
     }
 }
 

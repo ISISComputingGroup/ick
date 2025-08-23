@@ -10,6 +10,8 @@ clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.8"
 keepass = "0.8.4"
 log = "0.4.27"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
 windows = { version = "0.61.3", features = ["Win32", "Win32_Security", "Win32_Security_Credentials" ] }
 
 [dev-dependencies]
@@ -19,6 +21,8 @@ serial_test = "3.2.0"
 indexing_slicing = "deny"
 unwrap_used = "deny"
 panic = "deny"
+missing_safety_doc = "deny"
+undocumented_unsafe_blocks = "deny"
 
 [lib]
 doctest = false
