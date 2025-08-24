@@ -18,7 +18,7 @@ fn to_password_buffer(s: &str) -> Vec<u8> {
     s.encode_utf16().flat_map(|e| e.to_le_bytes()).collect()
 }
 
-pub fn add_win_cred(cred: Credential) -> anyhow::Result<()> {
+pub fn add_win_cred(cred: &Credential) -> anyhow::Result<()> {
     debug!(
         "Adding credential for user {} on host {}",
         cred.username(),
@@ -67,7 +67,7 @@ pub fn add_win_cred(cred: Credential) -> anyhow::Result<()> {
     };
 
     // SAFETY:
-    // FFI to windows API requires unsafe. No safe abstraction (yet) to call this function.
+    // Windows API requires unsafe. No safe abstraction (yet) to call this function.
     //
     // - TargetName must be a properly null-terminated vec of u16 (wchar)
     // - UserName must be a properly null-terminated vec of u16 (wchar)
@@ -76,7 +76,9 @@ pub fn add_win_cred(cred: Credential) -> anyhow::Result<()> {
     // - CredentialBlobSize must be less than CRED_MAX_CREDENTIAL_BLOB_SIZE
     // - HostName length must be <= CRED_MAX_DOMAIN_TARGET_NAME_LENGTH
     // - UserName length must be <= CRED_MAX_USERNAME_LENGTH
-    unsafe { CredWriteW(&credential, 0) }.with_context(|| {
+    let result = unsafe { CredWriteW(&credential, 0) };
+
+    result.with_context(|| {
         format!(
             "Failed to add credential for user {} on host {}",
             cred.username(),
@@ -94,7 +96,7 @@ pub fn remove_win_cred(domain: &str) -> anyhow::Result<()> {
     }
 
     // SAFETY:
-    // FFI to windows API requires unsafe. No safe abstraction (yet) to call this function.
+    // Windows API requires unsafe. No safe abstraction (yet) to call this function.
     //
     // - targetname must be a properly null-terminated vec of u16 (wchar)
     // - targetname length must be <= CRED_MAX_DOMAIN_TARGET_NAME_LENGTH

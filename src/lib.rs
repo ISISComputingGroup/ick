@@ -1,4 +1,4 @@
-//! ick - **i**nstrument-**c**redentials-from-**k**eeper/**k**eepass.
+//! **i**nstrument-**c**redentials-from-**k**eeper/**k**eepass.
 //!
 //! ick provides a thin wrapper over the windows credential store, injecting appropriate credentials
 //! which are acquired from either keeper or keepass.
@@ -32,6 +32,9 @@
 //! ick help add-creds
 //! ```
 //!
+//! The default Logging level is INFO. This can be increased or decreased one level at a time with the
+//! `-v`/`--verbose` or `-q`/`--quiet` flags, which can be specified multiple times. Logs are printed to stderr.
+//!
 //! # Examples
 //!
 //! Add user-level credentials for `INST1` and `INST2` to the windows credential store, as an unprivileged user or admin user:
@@ -54,6 +57,22 @@
 //! ```
 //! ick json -I machines.txt --admin --pretty
 //! ```
+//!
+//! # Local development
+//!
+//! You need cargo installed; see <https://rustup.rs/> for first-time install or run 'rustup update' to update.
+//!
+//! To run formatter, use `cargo fmt`
+//!
+//! To run linter, use `cargo clippy`
+//!
+//! To run tests, use `cargo test`
+//!
+//! To build in debug configuration, use `cargo build` (the executable will be in `.\target\debug\ick`)
+//!
+//! To build in release configuration, use `cargo build --release` (the executable will be in `.\target\release\ick`)
+//!
+//! To build docs page, use `cargo doc --no-deps` (the docs will be in `.\target\doc\ick`)
 
 use anyhow::{Context, bail};
 use clap::{Args, Parser, Subcommand};
@@ -131,25 +150,19 @@ enum Commands {
     },
 }
 
-fn add_win_creds(instruments: &[String], admin: bool) -> anyhow::Result<()> {
-    if instruments.is_empty() {
-        bail!("No instruments specified");
-    }
+fn add_win_creds<T: AsRef<str>>(instruments: &[T], admin: bool) -> anyhow::Result<()> {
     credentials::get_credentials(instruments, admin, None)?
-        .into_iter()
+        .iter()
         .try_for_each(wincred::add_win_cred)
 }
 
-fn remove_win_creds(instruments: &[String]) -> anyhow::Result<()> {
-    if instruments.is_empty() {
-        bail!("No instruments specified");
-    }
+fn remove_win_creds<T: AsRef<str>>(instruments: &[T]) -> anyhow::Result<()> {
     instruments
         .iter()
-        .try_for_each(|inst| wincred::remove_win_cred(inst))
+        .try_for_each(|inst| wincred::remove_win_cred(inst.as_ref()))
 }
 
-fn print_json(instruments: &[String], admin: bool, pretty: bool) -> anyhow::Result<()> {
+fn print_json<T: AsRef<str>>(instruments: &[T], admin: bool, pretty: bool) -> anyhow::Result<()> {
     let creds = credentials::get_credentials(instruments, admin, None)?;
     trace!("Serialising credentials to JSON");
 
@@ -167,7 +180,7 @@ fn load_instruments_from_file(file_contents: &str) -> Vec<String> {
         .lines()
         .map(|line| line.trim())
         .filter(|line| !line.is_empty() && !line.starts_with("#"))
-        .map(|s| s.to_owned())
+        .map(str::to_owned)
         .collect()
 }
 
@@ -225,7 +238,7 @@ bar
 ";
         assert_eq!(
             load_instruments_from_file(&file_contents),
-            vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()]
+            vec!["foo", "bar", "baz"]
         )
     }
 

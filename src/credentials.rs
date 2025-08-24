@@ -119,10 +119,10 @@ fn get_keepass_group_name(admin: bool) -> &'static str {
 }
 
 /// Get credentials for the specified machines from keepass.
-fn get_credentials_keepass(
+fn get_credentials_keepass<T: AsRef<str>>(
     source: &str,
     key: &str,
-    machines: &[String],
+    machines: &[T],
     admin: bool,
 ) -> anyhow::Result<Vec<Credential>> {
     trace!("Getting credentials from keepass DB at {source}");
@@ -135,22 +135,25 @@ fn get_credentials_keepass(
 
     let group_name = get_keepass_group_name(admin);
 
-    trace!("Looking for credentials in group {group_name} for machines {machines:?}");
+    trace!("Looking for credentials in group {group_name}");
 
     machines
         .iter()
         .map(|machine| {
-            let node = db.root.get(&[group_name, machine]).ok_or(anyhow!(
-                "unable to find credential {}/{}",
+            let node = db.root.get(&[group_name, machine.as_ref()]).ok_or(anyhow!(
+                "unable to find credential {}/{} in {}",
                 group_name,
-                machine
+                machine.as_ref(),
+                source
             ))?;
             match node {
                 Group { .. } => Err(anyhow!(
-                    "Expected entry, not group, in {group_name}/{machine}"
+                    "Expected entry, not group, in {}/{}",
+                    group_name,
+                    machine.as_ref()
                 )),
                 Entry(fields, ..) => Ok(Credential::new(
-                    machine,
+                    machine.as_ref(),
                     fields
                         .get("UserName")
                         .ok_or(anyhow!("Username field not found"))?,
@@ -167,8 +170,8 @@ fn get_credentials_keepass(
 ///
 /// If a credential_source is not provided, it will default to creating a credential source
 /// from the environment (and returning Err if the relevant variables are not set correctly).
-pub fn get_credentials(
-    machines: &[String],
+pub fn get_credentials<T: AsRef<str>>(
+    machines: &[T],
     admin: bool,
     credential_source: Option<&CredentialSource>,
 ) -> anyhow::Result<Vec<Credential>> {
@@ -193,7 +196,7 @@ mod tests {
     #[test]
     fn test_get_credentials_from_keeper_causes_error() {
         let result = get_credentials(
-            &["x".to_owned(), "y".to_owned()],
+            &["x", "y"],
             false,
             Some(&CredentialSource::Keeper {
                 token: "some_token".to_owned(),
