@@ -7,7 +7,7 @@ fn main() -> ExitCode {
         Ok(_) => {
             trace!("Exiting successfully");
             ExitCode::SUCCESS
-        },
+        }
         Err(s) => {
             error!("{s}");
             ExitCode::FAILURE

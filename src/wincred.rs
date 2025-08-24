@@ -69,11 +69,15 @@ pub fn add_win_cred(cred: &Credential) -> anyhow::Result<()> {
     // SAFETY:
     // Windows API requires unsafe. No safe abstraction (yet) to call this function.
     //
-    // - TargetName must be a properly null-terminated vec of u16 (wchar)
-    // - UserName must be a properly null-terminated vec of u16 (wchar)
+    // All requirements documented by:
+    // - https://learn.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credwritew
+    // - https://learn.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentialw
+    // must be met. Including:
+    // - TargetName must be a null-terminated vec of u16 (wchar)
+    // - UserName must be a null-terminated vec of u16 (wchar)
     // - CredentialBlobSize must be consistent with CredentialBlob
     // - All raw pointers must be valid & outlive the function call to the Win API
-    // - CredentialBlobSize must be less than CRED_MAX_CREDENTIAL_BLOB_SIZE
+    // - CredentialBlobSize must be <= CRED_MAX_CREDENTIAL_BLOB_SIZE
     // - HostName length must be <= CRED_MAX_DOMAIN_TARGET_NAME_LENGTH
     // - UserName length must be <= CRED_MAX_USERNAME_LENGTH
     let result = unsafe { CredWriteW(&credential, 0) };
@@ -95,17 +99,26 @@ pub fn remove_win_cred(domain: &str) -> anyhow::Result<()> {
         bail!("Cannot add cred, domain too long on host '{}'", domain)
     }
 
+    let targetname = PCWSTR(host_buff.as_ptr());
+
     // SAFETY:
     // Windows API requires unsafe. No safe abstraction (yet) to call this function.
     //
-    // - targetname must be a properly null-terminated vec of u16 (wchar)
+    // All requirements documented by
+    // - https://learn.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-creddeletew
+    // must be met. Including:
+    // - targetname must be a pointer to null-terminated vec of u16 (wchar)
     // - targetname length must be <= CRED_MAX_DOMAIN_TARGET_NAME_LENGTH
-    let result =
-        unsafe { CredDeleteW(PCWSTR(host_buff.as_ptr()), CRED_TYPE_DOMAIN_PASSWORD, None) };
+    let result = unsafe { CredDeleteW(targetname, CRED_TYPE_DOMAIN_PASSWORD, None) };
 
-    // If the credential didn't exist to be removed, warn but continue
     if let Err(err) = result {
-        warn!("Failed to remove credential for host '{}': {}", domain, err);
+        let err = format!("Failed to remove credential for host '{}': {}", domain, err);
+        if err.to_string().contains("Element not found") {
+            // If the credential didn't exist to be removed, warn but continue
+            warn!("{}", err);
+        } else {
+            bail!(err);
+        }
     }
 
     Ok(())

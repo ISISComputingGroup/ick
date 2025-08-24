@@ -60,7 +60,7 @@
 //!
 //! # Local development
 //!
-//! You need cargo installed; see <https://rustup.rs/> for first-time install or run 'rustup update' to update.
+//! You need cargo installed; see <https://rustup.rs/> for first-time install or run `rustup update` to update.
 //!
 //! To run formatter, use `cargo fmt`
 //!
@@ -80,6 +80,7 @@ use clap_verbosity_flag::InfoLevel;
 use log::{debug, trace};
 
 mod credentials;
+#[cfg(target_os = "windows")]
 mod wincred;
 
 #[derive(Debug, Args)]
@@ -132,9 +133,11 @@ struct App {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Add credentials to the windows credential store
+    #[cfg(target_os = "windows")]
     AddCreds {},
 
     /// Remove credentials from the windows credential store
+    #[cfg(target_os = "windows")]
     RemoveCreds {},
 
     /// Retrieve credentials for all specified machines in JSON format, for use
@@ -150,12 +153,14 @@ enum Commands {
     },
 }
 
+#[cfg(target_os = "windows")]
 fn add_win_creds<T: AsRef<str>>(instruments: &[T], admin: bool) -> anyhow::Result<()> {
     credentials::get_credentials(instruments, admin, None)?
         .iter()
         .try_for_each(wincred::add_win_cred)
 }
 
+#[cfg(target_os = "windows")]
 fn remove_win_creds<T: AsRef<str>>(instruments: &[T]) -> anyhow::Result<()> {
     instruments
         .iter()
@@ -214,8 +219,12 @@ pub fn run() -> anyhow::Result<()> {
     let machines = get_machines(&args)?;
 
     match args.command {
+        #[cfg(target_os = "windows")]
         Commands::AddCreds {} => add_win_creds(&machines, args.global_opts.admin),
+
+        #[cfg(target_os = "windows")]
         Commands::RemoveCreds {} => remove_win_creds(&machines),
+
         Commands::Json { pretty } => print_json(&machines, args.global_opts.admin, pretty),
     }
 }
@@ -251,7 +260,7 @@ bar
                 instruments_file: None,
                 admin: false,
             },
-            command: Commands::RemoveCreds {},
+            command: Commands::Json { pretty: false },
         });
 
         assert!(result.is_err_and(|e| { e.to_string().contains("No machines specified") }));
