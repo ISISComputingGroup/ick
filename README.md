@@ -1,3 +1,3 @@
-## fei
+## ick
 
-for-each-instrument
+See [docs](https://tom-willemsen.github.io/ick/)
