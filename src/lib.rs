@@ -153,20 +153,6 @@ enum Commands {
     },
 }
 
-#[cfg(target_os = "windows")]
-fn add_win_creds<T: AsRef<str>>(instruments: &[T], admin: bool) -> anyhow::Result<()> {
-    credentials::get_credentials(instruments, admin, None)?
-        .iter()
-        .try_for_each(wincred::add_win_cred)
-}
-
-#[cfg(target_os = "windows")]
-fn remove_win_creds<T: AsRef<str>>(instruments: &[T]) -> anyhow::Result<()> {
-    instruments
-        .iter()
-        .try_for_each(|inst| wincred::remove_win_cred(inst.as_ref()))
-}
-
 fn print_json<T: AsRef<str>>(instruments: &[T], admin: bool, pretty: bool) -> anyhow::Result<()> {
     let creds = credentials::get_credentials(instruments, admin, None)?;
     trace!("Serialising credentials to JSON");
@@ -220,10 +206,10 @@ pub fn run() -> anyhow::Result<()> {
 
     match args.command {
         #[cfg(target_os = "windows")]
-        Commands::AddCreds {} => add_win_creds(&machines, args.global_opts.admin),
+        Commands::AddCreds {} => wincred::add_win_creds(&machines, args.global_opts.admin),
 
         #[cfg(target_os = "windows")]
-        Commands::RemoveCreds {} => remove_win_creds(&machines),
+        Commands::RemoveCreds {} => wincred::remove_win_creds(&machines),
 
         Commands::Json { pretty } => print_json(&machines, args.global_opts.admin, pretty),
     }

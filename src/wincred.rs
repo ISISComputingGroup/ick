@@ -1,4 +1,4 @@
-use crate::credentials::Credential;
+use crate::credentials::{Credential, get_credentials};
 use anyhow::{Context, bail};
 use log::{debug, warn};
 use windows::{
@@ -18,7 +18,7 @@ fn to_password_buffer(s: &str) -> Vec<u8> {
     s.encode_utf16().flat_map(|e| e.to_le_bytes()).collect()
 }
 
-pub fn add_win_cred(cred: &Credential) -> anyhow::Result<()> {
+fn add_win_cred(cred: &Credential) -> anyhow::Result<()> {
     debug!(
         "Adding credential for user {} on host {}",
         cred.username(),
@@ -91,7 +91,13 @@ pub fn add_win_cred(cred: &Credential) -> anyhow::Result<()> {
     })
 }
 
-pub fn remove_win_cred(domain: &str) -> anyhow::Result<()> {
+pub fn add_win_creds<T: AsRef<str>>(instruments: &[T], admin: bool) -> anyhow::Result<()> {
+    get_credentials(instruments, admin, None)?
+        .iter()
+        .try_for_each(add_win_cred)
+}
+
+fn remove_win_cred(domain: &str) -> anyhow::Result<()> {
     debug!("Removing credential for host {}", domain);
     let host_buff: Vec<u16> = to_utf16_null_terminated_buffer(domain);
 
@@ -122,6 +128,12 @@ pub fn remove_win_cred(domain: &str) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn remove_win_creds<T: AsRef<str>>(instruments: &[T]) -> anyhow::Result<()> {
+    instruments
+        .iter()
+        .try_for_each(|inst| remove_win_cred(inst.as_ref()))
 }
 
 #[cfg(test)]
