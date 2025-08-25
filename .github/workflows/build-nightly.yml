@@ -1,0 +1,9 @@
+name: Nightly build
+on:
+  schedule:
+    - cron: "51 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  nightly-build:
+    uses: ./.github/workflows/build.yml
