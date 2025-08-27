@@ -1,3 +1,3 @@
 ## ick
 
-See [docs](https://tom-willemsen.github.io/ick/)
+See [docs](https://isiscomputinggroup.github.io/ick/ick/)
