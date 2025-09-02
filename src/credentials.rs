@@ -178,12 +178,12 @@ pub fn get_credentials<T: AsRef<str>>(
     admin: bool,
     credential_source: Option<&CredentialSource>,
 ) -> anyhow::Result<Vec<Credential>> {
-    let credential_source = match credential_source {
+    let source = match credential_source {
         Some(source) => source,
         None => &CredentialSource::from_env()?,
     };
 
-    match credential_source {
+    match source {
         CredentialSource::Keepass { path, key } => {
             get_credentials_keepass(path, key, machines, admin)
         }

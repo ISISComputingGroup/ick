@@ -19,6 +19,7 @@
 //! - `ICK_KEEPER_TOKEN` (keeper only), a token used to access the keeper API. **This should
 //!   not be set as a permanent environment variable**; it should be manually entered as an env variable
 //!   into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.
+//!   This is not supported yet.
 //!
 //! # Usage
 //!
@@ -58,6 +59,11 @@
 //! ick json -I machines.txt --admin --pretty
 //! ```
 //!
+//! With non-pretty output, an example output from `ick json` is:
+//! ```
+//! [{"host":"NDXSOMETHING","username":"NDXSOMETHING\\username","password":"the-password"}]
+//! ```
+//!
 //! # Local development
 //!
 //! You need cargo installed; see <https://rustup.rs/> for first-time install or run `rustup update` to update.
@@ -73,6 +79,8 @@
 //! To build in release configuration, use `cargo build --release` (the executable will be in `.\target\release\ick`)
 //!
 //! To build docs page, use `cargo doc --no-deps` (the docs will be in `.\target\doc\ick`)
+//!
+//! To run the command, use the ick executable which has been built in `target/release` (or `target/debug` for a debug build)
 
 use anyhow::{Context, bail};
 use clap::{Args, Parser, Subcommand};
