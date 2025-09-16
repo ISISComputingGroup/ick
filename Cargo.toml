@@ -8,7 +8,7 @@ anyhow = "1.0.99"
 clap = { version = "4.5.47", features=["derive"] }
 clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.8"
-keepass = "0.8.5"
+keepass = "0.8.10"
 log = "0.4.28"
 serde = { version = "1.0.224", features = ["derive"] }
 serde_json = "1.0.145"
