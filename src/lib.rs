@@ -88,11 +88,13 @@ use clap_verbosity_flag::InfoLevel;
 use log::{debug, trace};
 
 mod credentials;
+mod keepass;
+mod keeper;
 #[cfg(target_os = "windows")]
 mod wincred;
 
 #[derive(Debug, Args)]
-struct GlobalOpts {
+struct InstrumentOpts {
     #[clap(
         long = "instruments",
         short = 'i',
@@ -131,9 +133,6 @@ struct App {
     #[command(flatten)]
     verbosity: clap_verbosity_flag::Verbosity<InfoLevel>,
 
-    #[clap(flatten)]
-    global_opts: GlobalOpts,
-
     #[command(subcommand)]
     command: Commands,
 }
@@ -142,15 +141,24 @@ struct App {
 enum Commands {
     /// Add credentials to the windows credential store
     #[cfg(target_os = "windows")]
-    AddCreds {},
+    AddCreds {
+        #[clap(flatten)]
+        instrument_opts: InstrumentOpts,
+    },
 
     /// Remove credentials from the windows credential store
     #[cfg(target_os = "windows")]
-    RemoveCreds {},
+    RemoveCreds {
+        #[clap(flatten)]
+        instrument_opts: InstrumentOpts,
+    },
 
     /// Retrieve credentials for all specified machines in JSON format, for use
     /// by external tools or scripts.
     Json {
+        #[clap(flatten)]
+        instrument_opts: InstrumentOpts,
+
         #[arg(
             short = 'p',
             long = "pretty",
@@ -183,13 +191,13 @@ fn load_instruments_from_file(file_contents: &str) -> Vec<String> {
         .collect()
 }
 
-fn get_machines(args: &App) -> anyhow::Result<Vec<String>> {
-    let machines: Vec<String> = if let Some(filename) = &args.global_opts.instruments_file {
+fn get_machines(args: &InstrumentOpts) -> anyhow::Result<Vec<String>> {
+    let machines: Vec<String> = if let Some(filename) = &args.instruments_file {
         let file_contents = std::fs::read_to_string(filename)
             .with_context(|| format!("Instrument list file at '{filename}' could not be read"))?;
         load_instruments_from_file(&file_contents)
     } else {
-        args.global_opts.instruments.clone()
+        args.instruments.clone()
     };
 
     if machines.is_empty() {
@@ -210,23 +218,32 @@ pub fn run() -> anyhow::Result<()> {
 
     trace!("Logging started");
 
-    let machines = get_machines(&args)?;
-
     match args.command {
         #[cfg(target_os = "windows")]
-        Commands::AddCreds {} => wincred::add_win_creds(&machines, args.global_opts.admin),
+        Commands::AddCreds { instrument_opts } => {
+            let machines = get_machines(&instrument_opts)?;
+            wincred::add_win_creds(&machines, instrument_opts.admin)
+        }
 
         #[cfg(target_os = "windows")]
-        Commands::RemoveCreds {} => wincred::remove_win_creds(&machines),
+        Commands::RemoveCreds { instrument_opts } => {
+            let machines = get_machines(&instrument_opts)?;
+            wincred::remove_win_creds(&machines)
+        }
 
-        Commands::Json { pretty } => print_json(&machines, args.global_opts.admin, pretty),
+        Commands::Json {
+            instrument_opts,
+            pretty,
+        } => {
+            let machines = get_machines(&instrument_opts)?;
+            print_json(&machines, instrument_opts.admin, pretty)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap_verbosity_flag::Verbosity;
 
     #[test]
     fn test_load_instruments_from_file() {
@@ -247,14 +264,10 @@ bar
 
     #[test]
     fn test_get_machines_with_no_provided_instruments() {
-        let result = get_machines(&App {
-            verbosity: Verbosity::default(),
-            global_opts: GlobalOpts {
-                instruments: vec![],
-                instruments_file: None,
-                admin: false,
-            },
-            command: Commands::Json { pretty: false },
+        let result = get_machines(&InstrumentOpts {
+            instruments: vec![],
+            instruments_file: None,
+            admin: false,
         });
 
         assert!(result.is_err_and(|e| { e.to_string().contains("No machines specified") }));
