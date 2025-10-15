@@ -33,9 +33,9 @@ impl Credential {
     /// password must be the password corresponding to the above username
     pub fn new(host: String, username: String, password: String) -> Credential {
         Credential {
-            host: host.to_owned(),
-            username: username.to_owned(),
-            password: password.to_owned(),
+            host,
+            username,
+            password,
         }
     }
 

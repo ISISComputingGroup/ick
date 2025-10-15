@@ -19,7 +19,10 @@
 //! - `ICK_KEEPER_TOKEN` (keeper only), a token used to access the keeper API. **This should
 //!   not be set as a permanent environment variable**; it should be manually entered as an env variable
 //!   into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.
-//!   This is not supported yet.
+//!   To generate a token, log into keeper as an account with access to keeper secrets manager, go to the
+//!   'secrets manager' tab, select the 'ick' application, and click 'add device'. Set the 'device name' to
+//!   your name, select 'configuration file (base64)' as the method. This will generate a base64 string which
+//!   you can use as the `ICK_KEEPER_TOKEN`. Store this string in your personal password manager.
 //!
 //! # Usage
 //!
@@ -33,7 +36,7 @@
 //! ick help add-creds
 //! ```
 //!
-//! The default Logging level is INFO. This can be increased or decreased one level at a time with the
+//! The default Logging level is WARN. This can be increased or decreased one level at a time with the
 //! `-v`/`--verbose` or `-q`/`--quiet` flags, which can be specified multiple times. Logs are printed to stderr.
 //!
 //! # Examples
@@ -84,7 +87,7 @@
 
 use anyhow::{Context, bail};
 use clap::{Args, Parser, Subcommand};
-use clap_verbosity_flag::InfoLevel;
+use clap_verbosity_flag::WarnLevel;
 use log::{debug, trace};
 
 mod credentials;
@@ -131,7 +134,7 @@ Defaults to false (unprivileged user), specify this flag to use privileged crede
 #[command(about)]
 struct App {
     #[command(flatten)]
-    verbosity: clap_verbosity_flag::Verbosity<InfoLevel>,
+    verbosity: clap_verbosity_flag::Verbosity<WarnLevel>,
 
     #[command(subcommand)]
     command: Commands,
