@@ -32,7 +32,7 @@ jobs:
           echo|set /p="<meta http-equiv="refresh" content="0; url=ick/">" > target/doc/index.html
           exit /B 0
       - name: Upload artifacts (docs)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: docs
           path: |
@@ -69,7 +69,7 @@ jobs:
       - name: Build (release)
         run: cargo build --release
       - name: Upload artifacts (debug)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ format('debug-{0}', matrix.os) }}
           path: |
@@ -79,7 +79,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
       - name: Upload artifacts (release)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ format('release-{0}', matrix.os) }}
           path: |
