@@ -19,7 +19,10 @@
 //! - `ICK_KEEPER_TOKEN` (keeper only), a token used to access the keeper API. **This should
 //!   not be set as a permanent environment variable**; it should be manually entered as an env variable
 //!   into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.
-//!   This is not supported yet.
+//!   To generate a token, log into keeper as an account with access to keeper secrets manager, go to the
+//!   'secrets manager' tab, select the 'ick' application, and click 'add device'. Set the 'device name' to
+//!   your name, select 'configuration file (base64)' as the method. This will generate a base64 string which
+//!   you can use as the `ICK_KEEPER_TOKEN`. Store this string in your personal password manager.
 //!
 //! # Usage
 //!
@@ -33,7 +36,7 @@
 //! ick help add-creds
 //! ```
 //!
-//! The default Logging level is INFO. This can be increased or decreased one level at a time with the
+//! The default Logging level is WARN. This can be increased or decreased one level at a time with the
 //! `-v`/`--verbose` or `-q`/`--quiet` flags, which can be specified multiple times. Logs are printed to stderr.
 //!
 //! # Examples
@@ -84,15 +87,17 @@
 
 use anyhow::{Context, bail};
 use clap::{Args, Parser, Subcommand};
-use clap_verbosity_flag::InfoLevel;
+use clap_verbosity_flag::WarnLevel;
 use log::{debug, trace};
 
 mod credentials;
+mod keepass;
+mod keeper;
 #[cfg(target_os = "windows")]
 mod wincred;
 
 #[derive(Debug, Args)]
-struct GlobalOpts {
+struct InstrumentOpts {
     #[clap(
         long = "instruments",
         short = 'i',
@@ -129,10 +134,7 @@ Defaults to false (unprivileged user), specify this flag to use privileged crede
 #[command(about)]
 struct App {
     #[command(flatten)]
-    verbosity: clap_verbosity_flag::Verbosity<InfoLevel>,
-
-    #[clap(flatten)]
-    global_opts: GlobalOpts,
+    verbosity: clap_verbosity_flag::Verbosity<WarnLevel>,
 
     #[command(subcommand)]
     command: Commands,
@@ -142,15 +144,24 @@ struct App {
 enum Commands {
     /// Add credentials to the windows credential store
     #[cfg(target_os = "windows")]
-    AddCreds {},
+    AddCreds {
+        #[clap(flatten)]
+        instrument_opts: InstrumentOpts,
+    },
 
     /// Remove credentials from the windows credential store
     #[cfg(target_os = "windows")]
-    RemoveCreds {},
+    RemoveCreds {
+        #[clap(flatten)]
+        instrument_opts: InstrumentOpts,
+    },
 
     /// Retrieve credentials for all specified machines in JSON format, for use
     /// by external tools or scripts.
     Json {
+        #[clap(flatten)]
+        instrument_opts: InstrumentOpts,
+
         #[arg(
             short = 'p',
             long = "pretty",
@@ -183,13 +194,13 @@ fn load_instruments_from_file(file_contents: &str) -> Vec<String> {
         .collect()
 }
 
-fn get_machines(args: &App) -> anyhow::Result<Vec<String>> {
-    let machines: Vec<String> = if let Some(filename) = &args.global_opts.instruments_file {
+fn get_machines(args: &InstrumentOpts) -> anyhow::Result<Vec<String>> {
+    let machines: Vec<String> = if let Some(filename) = &args.instruments_file {
         let file_contents = std::fs::read_to_string(filename)
             .with_context(|| format!("Instrument list file at '{filename}' could not be read"))?;
         load_instruments_from_file(&file_contents)
     } else {
-        args.global_opts.instruments.clone()
+        args.instruments.clone()
     };
 
     if machines.is_empty() {
@@ -210,23 +221,32 @@ pub fn run() -> anyhow::Result<()> {
 
     trace!("Logging started");
 
-    let machines = get_machines(&args)?;
-
     match args.command {
         #[cfg(target_os = "windows")]
-        Commands::AddCreds {} => wincred::add_win_creds(&machines, args.global_opts.admin),
+        Commands::AddCreds { instrument_opts } => {
+            let machines = get_machines(&instrument_opts)?;
+            wincred::add_win_creds(&machines, instrument_opts.admin)
+        }
 
         #[cfg(target_os = "windows")]
-        Commands::RemoveCreds {} => wincred::remove_win_creds(&machines),
+        Commands::RemoveCreds { instrument_opts } => {
+            let machines = get_machines(&instrument_opts)?;
+            wincred::remove_win_creds(&machines)
+        }
 
-        Commands::Json { pretty } => print_json(&machines, args.global_opts.admin, pretty),
+        Commands::Json {
+            instrument_opts,
+            pretty,
+        } => {
+            let machines = get_machines(&instrument_opts)?;
+            print_json(&machines, instrument_opts.admin, pretty)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap_verbosity_flag::Verbosity;
 
     #[test]
     fn test_load_instruments_from_file() {
@@ -247,14 +267,10 @@ bar
 
     #[test]
     fn test_get_machines_with_no_provided_instruments() {
-        let result = get_machines(&App {
-            verbosity: Verbosity::default(),
-            global_opts: GlobalOpts {
-                instruments: vec![],
-                instruments_file: None,
-                admin: false,
-            },
-            command: Commands::Json { pretty: false },
+        let result = get_machines(&InstrumentOpts {
+            instruments: vec![],
+            instruments_file: None,
+            admin: false,
         });
 
         assert!(result.is_err_and(|e| { e.to_string().contains("No machines specified") }));
