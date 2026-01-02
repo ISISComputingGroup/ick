@@ -11,7 +11,7 @@ clap-verbosity-flag = "3.0.4"
 env_logger = "0.11.8"
 keepass = "0.8.16"
 keeper-secrets-manager-core = "17.0.3"
-log = "0.4.28"
+log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 
