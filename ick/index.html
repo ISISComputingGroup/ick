@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="instrument-credentials-from-keeper/keepass."><title>ick - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="ick" data-themes="" data-resource-suffix="" data-rustdoc-version="1.92.0 (ded5c06cf 2025-12-08)" data-channel="1.92.0" data-search-js="search-d69d8955.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate ick</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../ick/index.html">ick</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#installation" title="Installation">Installation</a></li><li><a href="#usage" title="Usage">Usage</a></li><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#local-development" title="Local development">Local development</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>ick</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/ick/lib.rs.html#1-278">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><strong>i</strong>nstrument-<strong>c</strong>redentials-from-<strong>k</strong>eeper/<strong>k</strong>eepass.</p>
+<p>ick provides a thin wrapper over the windows credential store, injecting appropriate credentials
+which are acquired from either keeper or keepass.</p>
+<h2 id="installation"><a class="doc-anchor" href="#installation">§</a>Installation</h2>
+<p>Put the binary <code>ick.exe</code> in a directory on your <code>PATH</code>.</p>
+<p><code>ick</code> requires environment variables in order to acquire credentials:</p>
+<ul>
+<li><code>ICK_CRED_STORE</code>, should be set to either <code>keeper</code> or <code>keepass</code>, describing the
+password-manager backend which <code>ick</code> will acquire passwords from. This environment
+variable can be set permanently.</li>
+<li><code>ICK_KEEPASS_FILE</code> (keepass only), a path to a keepass (.kdbx) file containing the passwords.
+This environment variable can be set permanently.</li>
+<li><code>ICK_KEEPASS_KEY</code> (keepass only), the decryption password for the keepass database. <strong>This should
+not be set as a permanent environment variable</strong>; it should be manually entered as an env variable
+into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.</li>
+<li><code>ICK_KEEPER_TOKEN</code> (keeper only), a token used to access the keeper API. <strong>This should
+not be set as a permanent environment variable</strong>; it should be manually entered as an env variable
+into a specific shell, and should be cleared (or the shell closed) once administration tasks are complete.
+To generate a token, log into keeper as an account with access to keeper secrets manager, go to the
+‘secrets manager’ tab, select the ‘ick’ application, and click ‘add device’. Set the ‘device name’ to
+your name, select ‘configuration file (base64)’ as the method. This will generate a base64 string which
+you can use as the <code>ICK_KEEPER_TOKEN</code>. Store this string in your personal password manager.</li>
+</ul>
+<h2 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage</h2>
+<p>For a description of available <code>ick</code> commands and flags, use:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>ick help</code></pre></div>
+<p>For help on a specific subcommand, for example <code>ick add-creds</code>, use:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>ick help add-creds</code></pre></div>
+<p>The default Logging level is WARN. This can be increased or decreased one level at a time with the
+<code>-v</code>/<code>--verbose</code> or <code>-q</code>/<code>--quiet</code> flags, which can be specified multiple times. Logs are printed to stderr.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>Add user-level credentials for <code>INST1</code> and <code>INST2</code> to the windows credential store, as an unprivileged user or admin user:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>ick add-creds -i NDXINST1,NDXINST2
+ick add-creds -i NDXINST1,NDXINST2 --admin</code></pre></div>
+<p>Specify machines in a file instead of on the command line:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>ick add-creds -I machines.txt</code></pre></div>
+<p>Remove credentials for <code>INST1</code> and <code>INST2</code> from the windows credential store:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>ick remove-creds -i NDXINST1,NDXINST2</code></pre></div>
+<p>Retrieve admin credentials for the specified machine in pretty-JSON format, for use by other tools or scripts:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>ick json -I machines.txt --admin --pretty</code></pre></div>
+<p>With non-pretty output, an example output from <code>ick json</code> is:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>[{<span class="string">"host"</span>:<span class="string">"NDXSOMETHING"</span>,<span class="string">"username"</span>:<span class="string">"NDXSOMETHING\\username"</span>,<span class="string">"password"</span>:<span class="string">"the-password"</span>}]</code></pre></div><h2 id="local-development"><a class="doc-anchor" href="#local-development">§</a>Local development</h2>
+<p>You need cargo installed; see <a href="https://rustup.rs/">https://rustup.rs/</a> for first-time install or run <code>rustup update</code> to update.</p>
+<p>To run formatter, use <code>cargo fmt</code></p>
+<p>To run linter, use <code>cargo clippy</code></p>
+<p>To run tests, use <code>cargo test</code></p>
+<p>To build in debug configuration, use <code>cargo build</code> (the executable will be in <code>.\target\debug\ick</code>)</p>
+<p>To build in release configuration, use <code>cargo build --release</code> (the executable will be in <code>.\target\release\ick</code>)</p>
+<p>To build docs page, use <code>cargo doc --no-deps</code> (the docs will be in <code>.\target\doc\ick</code>)</p>
+<p>To run the command, use the ick executable which has been built in <code>target/release</code> (or <code>target/debug</code> for a debug build)</p>
+</div></details></section></div></main></body></html>
