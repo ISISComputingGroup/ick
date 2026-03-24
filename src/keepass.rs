@@ -1,9 +1,6 @@
 use crate::credentials::Credential;
-use anyhow::{anyhow, bail};
-use keepass::{
-    Database, DatabaseKey,
-    db::NodeRef::{self, Entry, Group},
-};
+use anyhow::anyhow;
+use keepass::{Database, DatabaseKey, db::Entry};
 use log::trace;
 use std::fs::File;
 
@@ -15,21 +12,16 @@ fn get_keepass_group_name(admin: bool) -> &'static str {
     if admin { "Admin" } else { "User" }
 }
 
-fn node_to_credential(node: NodeRef, machine: String) -> anyhow::Result<Credential> {
-    match node {
-        Group { .. } => bail!("Expected entry, not group"),
-        Entry(fields, ..) => Ok(Credential::new(
-            machine,
-            fields
-                .get(USERNAME_KEY)
-                .ok_or(anyhow!("Username field not found"))?
-                .to_owned(),
-            fields
-                .get(PASSWORD_KEY)
-                .ok_or(anyhow!("Password field not found"))?
-                .to_owned(),
-        )),
-    }
+fn node_to_credential(node: &Entry, machine: String) -> anyhow::Result<Credential> {
+    Ok(Credential::new(
+        machine,
+        node.get(USERNAME_KEY)
+            .ok_or(anyhow!("Username field not found"))?
+            .to_owned(),
+        node.get(PASSWORD_KEY)
+            .ok_or(anyhow!("Password field not found"))?
+            .to_owned(),
+    ))
 }
 
 /// Get credentials for the specified machines from keepass.
@@ -56,10 +48,14 @@ pub fn get_credentials_keepass<T: AsRef<str>>(
         .iter()
         .map(AsRef::as_ref)
         .map(|machine| {
-            let node = db.root.get(&[group_name, machine]).ok_or(anyhow!(
+            let group = db
+                .root
+                .group_by_name(group_name)
+                .ok_or(anyhow!("unable to find group {group_name} in {source}",))?;
+            let entry = group.entry_by_name(machine).ok_or(anyhow!(
                 "unable to find credential {group_name}/{machine} in {source}",
             ))?;
-            node_to_credential(node, machine.to_owned())
+            node_to_credential(entry, machine.to_owned())
                 .map_err(|e| anyhow!("Failed to read credential at {group_name}/{machine}: {e}"))
         })
         .collect()
@@ -68,7 +64,7 @@ pub fn get_credentials_keepass<T: AsRef<str>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keepass::db::{Entry, Group, Value};
+    use keepass::db::{Entry, Value};
 
     #[test]
     fn test_get_keepass_group_name() {
@@ -77,17 +73,9 @@ mod tests {
     }
 
     #[test]
-    fn test_node_to_credential_with_group() {
-        let node_ref = NodeRef::Group(&Group::default());
-        let result = node_to_credential(node_ref, "".to_owned());
-        assert!(result.is_err_and(|e| e.to_string().contains("Expected entry, not group")))
-    }
-
-    #[test]
     fn test_node_to_credential_with_entry_with_missing_username() {
-        let entry = Entry::default();
-        let node_ref = NodeRef::Entry(&entry);
-        let result = node_to_credential(node_ref, "".to_owned());
+        let node_ref = Entry::default();
+        let result = node_to_credential(&node_ref, "".to_owned());
         assert!(result.is_err_and(|e| e.to_string().contains("Username field not found")))
     }
 
@@ -98,8 +86,7 @@ mod tests {
             USERNAME_KEY.to_owned(),
             Value::Unprotected("some_username".to_owned()),
         );
-        let node_ref = NodeRef::Entry(&entry);
-        let result = node_to_credential(node_ref, "".to_owned());
+        let result = node_to_credential(&entry, "".to_owned());
         assert!(result.is_err_and(|e| e.to_string().contains("Password field not found")))
     }
 
@@ -114,8 +101,7 @@ mod tests {
             PASSWORD_KEY.to_owned(),
             Value::Unprotected("some_password".to_owned()),
         );
-        let node_ref = NodeRef::Entry(&entry);
-        let result = node_to_credential(node_ref, "some_machine".to_owned());
+        let result = node_to_credential(&entry, "some_machine".to_owned());
         assert!(result.is_ok_and(|v| v
             == Credential::new(
                 "some_machine".to_owned(),
