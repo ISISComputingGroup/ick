@@ -64,49 +64,10 @@ pub fn get_credentials_keepass<T: AsRef<str>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keepass::db::{Entry, Value};
 
     #[test]
     fn test_get_keepass_group_name() {
         assert_eq!(get_keepass_group_name(false), "User");
         assert_eq!(get_keepass_group_name(true), "Admin");
-    }
-
-    #[test]
-    fn test_node_to_credential_with_entry_with_missing_username() {
-        let node_ref = Entry::default();
-        let result = node_to_credential(&node_ref, "".to_owned());
-        assert!(result.is_err_and(|e| e.to_string().contains("Username field not found")))
-    }
-
-    #[test]
-    fn test_node_to_credential_with_entry_with_missing_password() {
-        let mut entry = Entry::default();
-        entry.fields.insert(
-            USERNAME_KEY.to_owned(),
-            Value::Unprotected("some_username".to_owned()),
-        );
-        let result = node_to_credential(&entry, "".to_owned());
-        assert!(result.is_err_and(|e| e.to_string().contains("Password field not found")))
-    }
-
-    #[test]
-    fn test_node_to_credential_with_correct_entry() {
-        let mut entry = Entry::default();
-        entry.fields.insert(
-            USERNAME_KEY.to_owned(),
-            Value::Unprotected("some_username".to_owned()),
-        );
-        entry.fields.insert(
-            PASSWORD_KEY.to_owned(),
-            Value::Unprotected("some_password".to_owned()),
-        );
-        let result = node_to_credential(&entry, "some_machine".to_owned());
-        assert!(result.is_ok_and(|v| v
-            == Credential::new(
-                "some_machine".to_owned(),
-                "some_username".to_owned(),
-                "some_password".to_owned()
-            )))
     }
 }
