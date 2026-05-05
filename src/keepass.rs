@@ -48,14 +48,14 @@ pub fn get_credentials_keepass<T: AsRef<str>>(
         .iter()
         .map(AsRef::as_ref)
         .map(|machine| {
-            let group = db
-                .root
+            let root = db.root();
+            let group = root
                 .group_by_name(group_name)
                 .ok_or(anyhow!("unable to find group {group_name} in {source}",))?;
             let entry = group.entry_by_name(machine).ok_or(anyhow!(
                 "unable to find credential {group_name}/{machine} in {source}",
             ))?;
-            node_to_credential(entry, machine.to_owned())
+            node_to_credential(&entry, machine.to_owned())
                 .map_err(|e| anyhow!("Failed to read credential at {group_name}/{machine}: {e}"))
         })
         .collect()
